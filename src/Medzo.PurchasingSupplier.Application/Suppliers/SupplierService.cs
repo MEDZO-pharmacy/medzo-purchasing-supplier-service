@@ -11,6 +11,7 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         if (!request.AllowDuplicate && await repository.ExistsWithNameOrEmailAsync(normalizedName, normalizedEmail, cancellationToken))
             throw new SupplierDuplicateException();
+
         var supplier = new Supplier(request.Name, request.ContactName, request.Email, request.Phone, request.Address);
         await repository.AddAsync(supplier, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
@@ -20,11 +21,41 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
     private static void Validate(CreateSupplierRequest request)
     {
         var errors = new Dictionary<string, string[]>();
-        if (string.IsNullOrWhiteSpace(request.Name)) errors["name"] = ["Supplier name is required."];
-        if (string.IsNullOrWhiteSpace(request.ContactName)) errors["contactName"] = ["Contact name is required."];
-        if (string.IsNullOrWhiteSpace(request.Email) || !System.Net.Mail.MailAddress.TryCreate(request.Email, out _)) errors["email"] = ["A valid email address is required."];
-        if (string.IsNullOrWhiteSpace(request.Phone)) errors["phone"] = ["Phone number is required."];
+        ValidateRequiredText(request.Name, "name", "Supplier name", Supplier.MaxNameLength, errors);
+        ValidateRequiredText(request.ContactName, "contactName", "Contact person", Supplier.MaxContactNameLength, errors);
+
+        var trimmedEmail = request.Email?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedEmail))
+            errors["email"] = ["Email address is required."];
+        else if (trimmedEmail.Length > Supplier.MaxEmailLength)
+            errors["email"] = [$"Email address cannot exceed {Supplier.MaxEmailLength} characters."];
+        else if (!System.Net.Mail.MailAddress.TryCreate(trimmedEmail, out var parsedEmail) || !string.Equals(parsedEmail.Address, trimmedEmail, StringComparison.OrdinalIgnoreCase))
+            errors["email"] = ["Enter a valid email address."];
+
+        var trimmedPhone = request.Phone?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedPhone))
+            errors["phone"] = ["Phone number is required."];
+        else if (trimmedPhone.Length > Supplier.MaxPhoneLength)
+            errors["phone"] = [$"Phone number cannot exceed {Supplier.MaxPhoneLength} characters."];
+        else
+        {
+            var phoneDigits = trimmedPhone.Count(char.IsDigit);
+            if (!System.Text.RegularExpressions.Regex.IsMatch(trimmedPhone, "^[0-9+()\\-\\s]+$") || phoneDigits != 10)
+                errors["phone"] = ["Enter a valid 10-digit phone number."];
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Address) && request.Address.Trim().Length > Supplier.MaxAddressLength)
+            errors["address"] = [$"Business address cannot exceed {Supplier.MaxAddressLength} characters."];
+
         if (errors.Count > 0) throw new SupplierValidationException(errors);
+    }
+
+    private static void ValidateRequiredText(string? value, string field, string label, int maximumLength, IDictionary<string, string[]> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            errors[field] = [$"{label} is required."];
+        else if (value.Trim().Length > maximumLength)
+            errors[field] = [$"{label} cannot exceed {maximumLength} characters."];
     }
 }
 
