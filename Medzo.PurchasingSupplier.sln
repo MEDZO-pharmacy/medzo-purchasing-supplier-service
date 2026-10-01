@@ -1,0 +1,48 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medzo.PurchasingSupplier.Api", "src\Medzo.PurchasingSupplier.Api\Medzo.PurchasingSupplier.Api.csproj", "{A1C3B284-7A3B-4B1D-BAA9-1C1F3A112001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medzo.PurchasingSupplier.Application", "src\Medzo.PurchasingSupplier.Application\Medzo.PurchasingSupplier.Application.csproj", "{B2D4C395-8B4C-4C2E-CBB9-2D2F4B223002}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medzo.PurchasingSupplier.Domain", "src\Medzo.PurchasingSupplier.Domain\Medzo.PurchasingSupplier.Domain.csproj", "{C3E5D4A6-9C5D-4D3F-DCCA-3E3F5C334003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medzo.PurchasingSupplier.Infrastructure", "src\Medzo.PurchasingSupplier.Infrastructure\Medzo.PurchasingSupplier.Infrastructure.csproj", "{D4F6E5B7-AE6E-4E40-EDDB-4F4F6D445004}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medzo.PurchasingSupplier.UnitTests", "tests\Medzo.PurchasingSupplier.UnitTests\Medzo.PurchasingSupplier.UnitTests.csproj", "{E5A7F6C8-BF7F-4F51-FEEC-5A5F7E556005}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medzo.PurchasingSupplier.IntegrationTests", "tests\Medzo.PurchasingSupplier.IntegrationTests\Medzo.PurchasingSupplier.IntegrationTests.csproj", "{F6B8A7D9-C080-4062-AFFD-6B6F8F667006}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1C3B284-7A3B-4B1D-BAA9-1C1F3A112001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1C3B284-7A3B-4B1D-BAA9-1C1F3A112001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1C3B284-7A3B-4B1D-BAA9-1C1F3A112001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1C3B284-7A3B-4B1D-BAA9-1C1F3A112001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2D4C395-8B4C-4C2E-CBB9-2D2F4B223002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2D4C395-8B4C-4C2E-CBB9-2D2F4B223002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2D4C395-8B4C-4C2E-CBB9-2D2F4B223002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2D4C395-8B4C-4C2E-CBB9-2D2F4B223002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3E5D4A6-9C5D-4D3F-DCCA-3E3F5C334003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3E5D4A6-9C5D-4D3F-DCCA-3E3F5C334003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3E5D4A6-9C5D-4D3F-DCCA-3E3F5C334003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3E5D4A6-9C5D-4D3F-DCCA-3E3F5C334003}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4F6E5B7-AE6E-4E40-EDDB-4F4F6D445004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4F6E5B7-AE6E-4E40-EDDB-4F4F6D445004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4F6E5B7-AE6E-4E40-EDDB-4F4F6D445004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4F6E5B7-AE6E-4E40-EDDB-4F4F6D445004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5A7F6C8-BF7F-4F51-FEEC-5A5F7E556005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5A7F6C8-BF7F-4F51-FEEC-5A5F7E556005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5A7F6C8-BF7F-4F51-FEEC-5A5F7E556005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5A7F6C8-BF7F-4F51-FEEC-5A5F7E556005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6B8A7D9-C080-4062-AFFD-6B6F8F667006}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6B8A7D9-C080-4062-AFFD-6B6F8F667006}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6B8A7D9-C080-4062-AFFD-6B6F8F667006}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6B8A7D9-C080-4062-AFFD-6B6F8F667006}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

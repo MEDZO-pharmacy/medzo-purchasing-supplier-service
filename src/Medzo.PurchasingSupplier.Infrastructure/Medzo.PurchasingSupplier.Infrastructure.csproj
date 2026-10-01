@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Medzo.PurchasingSupplier.Application\Medzo.PurchasingSupplier.Application.csproj" />
+    <ProjectReference Include="..\Medzo.PurchasingSupplier.Domain\Medzo.PurchasingSupplier.Domain.csproj" />
+  </ItemGroup>
+</Project>
