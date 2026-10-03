@@ -31,4 +31,11 @@ public sealed class SuppliersController(ISupplierService service) : ControllerBa
         await service.DeactivateAsync(id, cancellationToken);
         return NoContent();
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteInactive(Guid id, CancellationToken cancellationToken)
+    {
+        await service.DeleteInactiveAsync(id, cancellationToken);
+        return NoContent();
+    }
 }

@@ -41,6 +41,14 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
         await repository.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeleteInactiveAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var supplier = await FindAsync(id, cancellationToken);
+        if (supplier.IsActive) throw new SupplierMustBeInactiveException();
+        repository.Remove(supplier);
+        await repository.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<Supplier> FindAsync(Guid id, CancellationToken cancellationToken) =>
         await repository.GetAsync(id, cancellationToken) ?? throw new SupplierNotFoundException();
 
@@ -60,3 +68,4 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
 public sealed class SupplierValidationException(IReadOnlyDictionary<string, string[]> errors) : Exception("Supplier details are invalid.") { public IReadOnlyDictionary<string, string[]> Errors { get; } = errors; }
 public sealed class SupplierDuplicateException() : Exception("A supplier with the same name or email already exists. Review the record before saving a duplicate.");
 public sealed class SupplierNotFoundException() : Exception("Supplier not found.");
+public sealed class SupplierMustBeInactiveException() : Exception("Deactivate the supplier before deleting it.");

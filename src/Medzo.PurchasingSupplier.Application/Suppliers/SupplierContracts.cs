@@ -11,6 +11,7 @@ public interface ISupplierService
     Task<SupplierResponse> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<SupplierResponse> UpdateAsync(Guid id, UpdateSupplierRequest request, CancellationToken cancellationToken);
     Task DeactivateAsync(Guid id, CancellationToken cancellationToken);
+    Task DeleteInactiveAsync(Guid id, CancellationToken cancellationToken);
 }
 public interface ISupplierRepository
 {
@@ -18,5 +19,6 @@ public interface ISupplierRepository
     Task<IReadOnlyList<Domain.Suppliers.Supplier>> ListAsync(bool activeOnly, CancellationToken cancellationToken);
     Task<Domain.Suppliers.Supplier?> GetAsync(Guid id, CancellationToken cancellationToken);
     Task AddAsync(Domain.Suppliers.Supplier supplier, CancellationToken cancellationToken);
+    void Remove(Domain.Suppliers.Supplier supplier);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

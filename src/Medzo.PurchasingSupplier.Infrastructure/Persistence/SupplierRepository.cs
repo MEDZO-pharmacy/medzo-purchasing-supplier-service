@@ -10,5 +10,6 @@ public sealed class SupplierRepository(PurchasingSupplierDbContext database) : I
     public async Task<IReadOnlyList<Supplier>> ListAsync(bool activeOnly, CancellationToken cancellationToken) => await database.Suppliers.Where(x => !activeOnly || x.IsActive).OrderBy(x => x.Name).ToListAsync(cancellationToken);
     public Task<Supplier?> GetAsync(Guid id, CancellationToken cancellationToken) => database.Suppliers.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
     public Task AddAsync(Supplier supplier, CancellationToken cancellationToken) => database.Suppliers.AddAsync(supplier, cancellationToken).AsTask();
+    public void Remove(Supplier supplier) => database.Suppliers.Remove(supplier);
     public Task SaveChangesAsync(CancellationToken cancellationToken) => database.SaveChangesAsync(cancellationToken);
 }
