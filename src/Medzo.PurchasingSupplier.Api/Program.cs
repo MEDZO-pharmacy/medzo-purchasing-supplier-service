@@ -37,7 +37,9 @@ var app = builder.Build();
 if (string.Equals(builder.Configuration["Database:Provider"], "Sqlite", StringComparison.OrdinalIgnoreCase))
 {
     await using var scope = app.Services.CreateAsyncScope();
-    await scope.ServiceProvider.GetRequiredService<PurchasingSupplierDbContext>().Database.EnsureCreatedAsync();
+    var database = scope.ServiceProvider.GetRequiredService<PurchasingSupplierDbContext>();
+    await database.Database.EnsureCreatedAsync();
+    await EnsureSqliteSupplierColumnsAsync(database);
 }
 
 app.UseExceptionHandler();
@@ -47,5 +49,32 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+static async Task EnsureSqliteSupplierColumnsAsync(PurchasingSupplierDbContext database)
+{
+    var connection = database.Database.GetDbConnection();
+    await connection.OpenAsync();
+    try
+    {
+        await using var columnsCommand = connection.CreateCommand();
+        columnsCommand.CommandText = "PRAGMA table_info(suppliers);";
+        await using var reader = await columnsCommand.ExecuteReaderAsync();
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (await reader.ReadAsync()) columns.Add(reader.GetString(1));
+        if (!columns.Contains("IsActive"))
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "ALTER TABLE suppliers ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1;";
+            await command.ExecuteNonQueryAsync();
+        }
+        if (!columns.Contains("DeactivatedAtUtc"))
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "ALTER TABLE suppliers ADD COLUMN DeactivatedAtUtc TEXT NULL;";
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+    finally { await connection.CloseAsync(); }
+}
 
 public partial class Program;

@@ -12,6 +12,8 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetails, I
         {
             SupplierValidationException validation => (StatusCodes.Status400BadRequest, "Validation failed", validation.Errors),
             SupplierDuplicateException => (StatusCodes.Status409Conflict, "Possible duplicate supplier", (IReadOnlyDictionary<string, string[]>?)null),
+            SupplierNotFoundException => (StatusCodes.Status404NotFound, "Supplier not found", (IReadOnlyDictionary<string, string[]>?)null),
+            SupplierMustBeInactiveException => (StatusCodes.Status409Conflict, "Supplier must be inactive", (IReadOnlyDictionary<string, string[]>?)null),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.", null)
         };
         if (status == 500) logger.LogError(exception, "Unhandled request error.");
