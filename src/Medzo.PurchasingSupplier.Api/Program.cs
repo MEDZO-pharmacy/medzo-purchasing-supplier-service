@@ -2,6 +2,7 @@ using Medzo.PurchasingSupplier.Infrastructure;
 using Medzo.PurchasingSupplier.Api.Configuration;
 using Medzo.PurchasingSupplier.Api.ExceptionHandling;
 using Medzo.PurchasingSupplier.Application.Suppliers;
+using Medzo.PurchasingSupplier.Application.PurchaseOrders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Medzo.PurchasingSupplier.Infrastructure.Persistence;
@@ -18,6 +19,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddHealthChecks();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var jwtSecret = builder.Configuration["Jwt:Secret"];
@@ -40,6 +42,7 @@ if (string.Equals(builder.Configuration["Database:Provider"], "Sqlite", StringCo
     var database = scope.ServiceProvider.GetRequiredService<PurchasingSupplierDbContext>();
     await database.Database.EnsureCreatedAsync();
     await EnsureSqliteSupplierColumnsAsync(database);
+    await EnsureSqlitePurchaseOrderTablesAsync(database);
 }
 
 app.UseExceptionHandler();
@@ -75,6 +78,15 @@ static async Task EnsureSqliteSupplierColumnsAsync(PurchasingSupplierDbContext d
         }
     }
     finally { await connection.CloseAsync(); }
+}
+
+static async Task EnsureSqlitePurchaseOrderTablesAsync(PurchasingSupplierDbContext database)
+{
+    await database.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS purchase_orders (Id TEXT NOT NULL CONSTRAINT PK_purchase_orders PRIMARY KEY, SupplierId TEXT NOT NULL, OrderNumber TEXT NOT NULL, Status TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL, CONSTRAINT FK_purchase_orders_suppliers_SupplierId FOREIGN KEY (SupplierId) REFERENCES suppliers (Id) ON DELETE RESTRICT);");
+    await database.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_purchase_orders_OrderNumber ON purchase_orders (OrderNumber);");
+    await database.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_purchase_orders_SupplierId ON purchase_orders (SupplierId);");
+    await database.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS purchase_order_items (Id TEXT NOT NULL CONSTRAINT PK_purchase_order_items PRIMARY KEY, PurchaseOrderId TEXT NOT NULL, MedicineId TEXT NOT NULL, MedicineName TEXT NOT NULL, Quantity INTEGER NOT NULL, CONSTRAINT FK_purchase_order_items_purchase_orders_PurchaseOrderId FOREIGN KEY (PurchaseOrderId) REFERENCES purchase_orders (Id) ON DELETE CASCADE);");
+    await database.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_purchase_order_items_PurchaseOrderId ON purchase_order_items (PurchaseOrderId);");
 }
 
 public partial class Program;
