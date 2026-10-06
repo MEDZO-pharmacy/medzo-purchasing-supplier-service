@@ -18,6 +18,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetails, I
             PurchaseOrderValidationException validation => (StatusCodes.Status400BadRequest, "Validation failed", validation.Errors),
             PurchaseOrderSupplierNotFoundException => (StatusCodes.Status404NotFound, "Supplier unavailable", (IReadOnlyDictionary<string, string[]>?)null),
             PurchaseOrderSupplierInactiveException => (StatusCodes.Status409Conflict, "Supplier inactive", (IReadOnlyDictionary<string, string[]>?)null),
+            PurchaseOrderNotFoundException => (StatusCodes.Status404NotFound, "Purchase order not found", (IReadOnlyDictionary<string, string[]>?)null),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.", null)
         };
         if (status == 500) logger.LogError(exception, "Unhandled request error.");

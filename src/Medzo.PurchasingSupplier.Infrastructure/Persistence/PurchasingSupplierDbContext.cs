@@ -23,7 +23,7 @@ public sealed class PurchasingSupplierDbContext(DbContextOptions<PurchasingSuppl
         purchaseOrder.ToTable("purchase_orders"); purchaseOrder.HasKey(x => x.Id); purchaseOrder.Property(x => x.Id).ValueGeneratedNever();
         purchaseOrder.Property(x => x.OrderNumber).HasMaxLength(30).IsRequired(); purchaseOrder.HasIndex(x => x.OrderNumber).IsUnique();
         purchaseOrder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-        purchaseOrder.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        purchaseOrder.HasOne(x => x.Supplier).WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
         purchaseOrder.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
 
         var purchaseOrderItem = builder.Entity<PurchaseOrderItem>();

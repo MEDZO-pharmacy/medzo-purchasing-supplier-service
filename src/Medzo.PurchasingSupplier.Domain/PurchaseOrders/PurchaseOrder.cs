@@ -1,5 +1,7 @@
 namespace Medzo.PurchasingSupplier.Domain.PurchaseOrders;
 
+using Medzo.PurchasingSupplier.Domain.Suppliers;
+
 public sealed class PurchaseOrder
 {
     private PurchaseOrder() { }
@@ -20,6 +22,7 @@ public sealed class PurchaseOrder
 
     public Guid Id { get; private set; }
     public Guid SupplierId { get; private set; }
+    public Supplier Supplier { get; private set; } = null!;
     public string OrderNumber { get; private set; } = null!;
     public PurchaseOrderStatus Status { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
