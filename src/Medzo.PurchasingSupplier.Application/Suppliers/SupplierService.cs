@@ -11,6 +11,7 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         if (!request.AllowDuplicate && await repository.ExistsWithNameOrEmailAsync(normalizedName, normalizedEmail, null, cancellationToken))
             throw new SupplierDuplicateException();
+
         var supplier = new Supplier(request.Name, request.ContactName, request.Email, request.Phone, request.Address);
         await repository.AddAsync(supplier, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
@@ -62,6 +63,14 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
         if (string.IsNullOrWhiteSpace(email) || !System.Net.Mail.MailAddress.TryCreate(email, out _)) errors["email"] = ["A valid email address is required."];
         if (string.IsNullOrWhiteSpace(phone)) errors["phone"] = ["Phone number is required."];
         if (errors.Count > 0) throw new SupplierValidationException(errors);
+    }
+
+    private static void ValidateRequiredText(string? value, string field, string label, int maximumLength, IDictionary<string, string[]> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            errors[field] = [$"{label} is required."];
+        else if (value.Trim().Length > maximumLength)
+            errors[field] = [$"{label} cannot exceed {maximumLength} characters."];
     }
 }
 
