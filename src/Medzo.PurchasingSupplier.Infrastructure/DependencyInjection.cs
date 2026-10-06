@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Medzo.PurchasingSupplier.Application.Suppliers;
+using Medzo.PurchasingSupplier.Application.PurchaseOrders;
 using Medzo.PurchasingSupplier.Infrastructure.Persistence;
 
 namespace Medzo.PurchasingSupplier.Infrastructure;
@@ -18,6 +19,7 @@ public static class DependencyInjection
             else options.UseSqlite(connection);
         });
         services.AddScoped<ISupplierRepository, SupplierRepository>();
+        services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
         return services;
     }
 }

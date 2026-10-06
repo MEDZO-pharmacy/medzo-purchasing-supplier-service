@@ -13,13 +13,7 @@ public sealed class Supplier
     public Supplier(string name, string contactName, string email, string phone, string? address)
     {
         Id = Guid.NewGuid();
-        Name = Required(name, MaxNameLength, "Supplier name");
-        ContactName = Required(contactName, MaxContactNameLength, "Contact name");
-        Email = Required(email, MaxEmailLength, "Email");
-        Phone = Required(phone, MaxPhoneLength, "Phone");
-        Address = Optional(address, MaxAddressLength, "Address");
-        NormalizedName = Name.ToUpperInvariant();
-        NormalizedEmail = Email.ToUpperInvariant();
+        Update(name, contactName, email, phone, address);
         CreatedAtUtc = DateTimeOffset.UtcNow;
     }
 
@@ -32,6 +26,26 @@ public sealed class Supplier
     public string Phone { get; private set; } = null!;
     public string? Address { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
+    public bool IsActive { get; private set; } = true;
+    public DateTimeOffset? DeactivatedAtUtc { get; private set; }
+
+    public void Update(string name, string contactName, string email, string phone, string? address)
+    {
+        Name = Required(name, MaxNameLength, "Supplier name");
+        ContactName = Required(contactName, MaxContactNameLength, "Contact name");
+        Email = Required(email, MaxEmailLength, "Email");
+        Phone = Required(phone, MaxPhoneLength, "Phone");
+        Address = Optional(address, MaxAddressLength, "Address");
+        NormalizedName = Name.ToUpperInvariant();
+        NormalizedEmail = Email.ToUpperInvariant();
+    }
+
+    public void Deactivate()
+    {
+        if (!IsActive) return;
+        IsActive = false;
+        DeactivatedAtUtc = DateTimeOffset.UtcNow;
+    }
 
     private static string Required(string value, int maximum, string label)
     {

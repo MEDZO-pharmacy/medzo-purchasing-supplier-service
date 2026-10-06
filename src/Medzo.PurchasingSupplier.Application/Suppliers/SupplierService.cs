@@ -6,47 +6,62 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
 {
     public async Task<SupplierResponse> CreateAsync(CreateSupplierRequest request, CancellationToken cancellationToken)
     {
-        Validate(request);
+        Validate(request.Name, request.ContactName, request.Email, request.Phone);
         var normalizedName = request.Name.Trim().ToUpperInvariant();
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
-        if (!request.AllowDuplicate && await repository.ExistsWithNameOrEmailAsync(normalizedName, normalizedEmail, cancellationToken))
+        if (!request.AllowDuplicate && await repository.ExistsWithNameOrEmailAsync(normalizedName, normalizedEmail, null, cancellationToken))
             throw new SupplierDuplicateException();
 
         var supplier = new Supplier(request.Name, request.ContactName, request.Email, request.Phone, request.Address);
         await repository.AddAsync(supplier, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
-        return new(supplier.Id, supplier.Name, supplier.ContactName, supplier.Email, supplier.Phone, supplier.Address, supplier.CreatedAtUtc);
+        return ToResponse(supplier);
     }
 
-    private static void Validate(CreateSupplierRequest request)
+    public async Task<IReadOnlyList<SupplierResponse>> ListAsync(bool activeOnly, CancellationToken cancellationToken) =>
+        (await repository.ListAsync(activeOnly, cancellationToken)).Select(ToResponse).ToList();
+
+    public async Task<SupplierResponse> GetAsync(Guid id, CancellationToken cancellationToken) =>
+        ToResponse(await FindAsync(id, cancellationToken));
+
+    public async Task<SupplierResponse> UpdateAsync(Guid id, UpdateSupplierRequest request, CancellationToken cancellationToken)
+    {
+        Validate(request.Name, request.ContactName, request.Email, request.Phone);
+        var supplier = await FindAsync(id, cancellationToken);
+        if (await repository.ExistsWithNameOrEmailAsync(request.Name.Trim().ToUpperInvariant(), request.Email.Trim().ToUpperInvariant(), id, cancellationToken))
+            throw new SupplierDuplicateException();
+        supplier.Update(request.Name, request.ContactName, request.Email, request.Phone, request.Address);
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToResponse(supplier);
+    }
+
+    public async Task DeactivateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var supplier = await FindAsync(id, cancellationToken);
+        supplier.Deactivate();
+        await repository.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteInactiveAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var supplier = await FindAsync(id, cancellationToken);
+        if (supplier.IsActive) throw new SupplierMustBeInactiveException();
+        repository.Remove(supplier);
+        await repository.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<Supplier> FindAsync(Guid id, CancellationToken cancellationToken) =>
+        await repository.GetAsync(id, cancellationToken) ?? throw new SupplierNotFoundException();
+
+    private static SupplierResponse ToResponse(Supplier supplier) => new(supplier.Id, supplier.Name, supplier.ContactName, supplier.Email, supplier.Phone, supplier.Address, supplier.IsActive, supplier.CreatedAtUtc, supplier.DeactivatedAtUtc);
+
+    private static void Validate(string name, string contactName, string email, string phone)
     {
         var errors = new Dictionary<string, string[]>();
-        ValidateRequiredText(request.Name, "name", "Supplier name", Supplier.MaxNameLength, errors);
-        ValidateRequiredText(request.ContactName, "contactName", "Contact person", Supplier.MaxContactNameLength, errors);
-
-        var trimmedEmail = request.Email?.Trim();
-        if (string.IsNullOrWhiteSpace(trimmedEmail))
-            errors["email"] = ["Email address is required."];
-        else if (trimmedEmail.Length > Supplier.MaxEmailLength)
-            errors["email"] = [$"Email address cannot exceed {Supplier.MaxEmailLength} characters."];
-        else if (!System.Net.Mail.MailAddress.TryCreate(trimmedEmail, out var parsedEmail) || !string.Equals(parsedEmail.Address, trimmedEmail, StringComparison.OrdinalIgnoreCase))
-            errors["email"] = ["Enter a valid email address."];
-
-        var trimmedPhone = request.Phone?.Trim();
-        if (string.IsNullOrWhiteSpace(trimmedPhone))
-            errors["phone"] = ["Phone number is required."];
-        else if (trimmedPhone.Length > Supplier.MaxPhoneLength)
-            errors["phone"] = [$"Phone number cannot exceed {Supplier.MaxPhoneLength} characters."];
-        else
-        {
-            var phoneDigits = trimmedPhone.Count(char.IsDigit);
-            if (!System.Text.RegularExpressions.Regex.IsMatch(trimmedPhone, "^[0-9+()\\-\\s]+$") || phoneDigits != 10)
-                errors["phone"] = ["Enter a valid 10-digit phone number."];
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Address) && request.Address.Trim().Length > Supplier.MaxAddressLength)
-            errors["address"] = [$"Business address cannot exceed {Supplier.MaxAddressLength} characters."];
-
+        if (string.IsNullOrWhiteSpace(name)) errors["name"] = ["Supplier name is required."];
+        if (string.IsNullOrWhiteSpace(contactName)) errors["contactName"] = ["Contact name is required."];
+        if (string.IsNullOrWhiteSpace(email) || !System.Net.Mail.MailAddress.TryCreate(email, out _)) errors["email"] = ["A valid email address is required."];
+        if (string.IsNullOrWhiteSpace(phone)) errors["phone"] = ["Phone number is required."];
         if (errors.Count > 0) throw new SupplierValidationException(errors);
     }
 
@@ -61,3 +76,5 @@ public sealed class SupplierService(ISupplierRepository repository) : ISupplierS
 
 public sealed class SupplierValidationException(IReadOnlyDictionary<string, string[]> errors) : Exception("Supplier details are invalid.") { public IReadOnlyDictionary<string, string[]> Errors { get; } = errors; }
 public sealed class SupplierDuplicateException() : Exception("A supplier with the same name or email already exists. Review the record before saving a duplicate.");
+public sealed class SupplierNotFoundException() : Exception("Supplier not found.");
+public sealed class SupplierMustBeInactiveException() : Exception("Deactivate the supplier before deleting it.");
