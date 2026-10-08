@@ -9,6 +9,12 @@ namespace Medzo.PurchasingSupplier.Api.Controllers;
 [Authorize(Policy = "SupplierManage")]
 public sealed class PurchaseOrdersController(IPurchaseOrderService service) : ControllerBase
 {
+    [HttpGet]
+    public Task<IReadOnlyList<PurchaseOrderResponse>> List(CancellationToken cancellationToken) => service.ListAsync(cancellationToken);
+
+    [HttpGet("{id:guid}")]
+    public Task<PurchaseOrderResponse> Get(Guid id, CancellationToken cancellationToken) => service.GetAsync(id, cancellationToken);
+
     [HttpPost]
     public async Task<ActionResult<PurchaseOrderResponse>> Create(CreatePurchaseOrderRequest request, CancellationToken cancellationToken)
     {

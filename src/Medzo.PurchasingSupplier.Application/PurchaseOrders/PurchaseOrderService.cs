@@ -17,7 +17,16 @@ public sealed class PurchaseOrderService(IPurchaseOrderRepository repository) : 
         var order = new PurchaseOrder(supplier.Id, number, items);
         await repository.AddAsync(order, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
-        return Map(order);
+        return Map(order, supplier.Name);
+    }
+
+    public async Task<IReadOnlyList<PurchaseOrderResponse>> ListAsync(CancellationToken cancellationToken) =>
+        (await repository.ListAsync(cancellationToken)).Select(order => Map(order, order.Supplier.Name)).ToList();
+
+    public async Task<PurchaseOrderResponse> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var order = await repository.GetAsync(id, cancellationToken) ?? throw new PurchaseOrderNotFoundException();
+        return Map(order, order.Supplier.Name);
     }
 
     private static Dictionary<string, string[]> Validate(CreatePurchaseOrderRequest request)
@@ -38,9 +47,10 @@ public sealed class PurchaseOrderService(IPurchaseOrderRepository repository) : 
         return errors;
     }
 
-    private static PurchaseOrderResponse Map(PurchaseOrder order) => new(order.Id, order.OrderNumber, order.SupplierId, order.Status.ToString().ToUpperInvariant(), order.CreatedAtUtc, order.Items.Select(item => new PurchaseOrderItemResponse(item.Id, item.MedicineId, item.MedicineName, item.Quantity)).ToList());
+    private static PurchaseOrderResponse Map(PurchaseOrder order, string supplierName) => new(order.Id, order.OrderNumber, order.SupplierId, supplierName, order.Status.ToString().ToUpperInvariant(), order.CreatedAtUtc, order.Items.Select(item => new PurchaseOrderItemResponse(item.Id, item.MedicineId, item.MedicineName, item.Quantity)).ToList());
 }
 
 public sealed class PurchaseOrderValidationException(IReadOnlyDictionary<string, string[]> errors) : Exception("Purchase order details are invalid.") { public IReadOnlyDictionary<string, string[]> Errors { get; } = errors; }
 public sealed class PurchaseOrderSupplierNotFoundException() : Exception("The selected supplier is unavailable.");
 public sealed class PurchaseOrderSupplierInactiveException() : Exception("The selected supplier is inactive and cannot receive new purchase orders.");
+public sealed class PurchaseOrderNotFoundException() : Exception("Purchase order not found.");
