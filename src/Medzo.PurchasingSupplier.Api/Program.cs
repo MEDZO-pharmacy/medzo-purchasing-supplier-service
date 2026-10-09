@@ -82,11 +82,28 @@ static async Task EnsureSqliteSupplierColumnsAsync(PurchasingSupplierDbContext d
 
 static async Task EnsureSqlitePurchaseOrderTablesAsync(PurchasingSupplierDbContext database)
 {
-    await database.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS purchase_orders (Id TEXT NOT NULL CONSTRAINT PK_purchase_orders PRIMARY KEY, SupplierId TEXT NOT NULL, OrderNumber TEXT NOT NULL, Status TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL, CONSTRAINT FK_purchase_orders_suppliers_SupplierId FOREIGN KEY (SupplierId) REFERENCES suppliers (Id) ON DELETE RESTRICT);");
+    await database.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS purchase_orders (Id TEXT NOT NULL CONSTRAINT PK_purchase_orders PRIMARY KEY, SupplierId TEXT NOT NULL, OrderNumber TEXT NOT NULL, Status TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL, ReceivedAtUtc TEXT NULL, CONSTRAINT FK_purchase_orders_suppliers_SupplierId FOREIGN KEY (SupplierId) REFERENCES suppliers (Id) ON DELETE RESTRICT);");
     await database.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_purchase_orders_OrderNumber ON purchase_orders (OrderNumber);");
     await database.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_purchase_orders_SupplierId ON purchase_orders (SupplierId);");
     await database.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS purchase_order_items (Id TEXT NOT NULL CONSTRAINT PK_purchase_order_items PRIMARY KEY, PurchaseOrderId TEXT NOT NULL, MedicineId TEXT NOT NULL, MedicineName TEXT NOT NULL, Quantity INTEGER NOT NULL, CONSTRAINT FK_purchase_order_items_purchase_orders_PurchaseOrderId FOREIGN KEY (PurchaseOrderId) REFERENCES purchase_orders (Id) ON DELETE CASCADE);");
     await database.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_purchase_order_items_PurchaseOrderId ON purchase_order_items (PurchaseOrderId);");
+    var connection = database.Database.GetDbConnection();
+    await connection.OpenAsync();
+    try
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA table_info(purchase_orders);";
+        await using var reader = await command.ExecuteReaderAsync();
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (await reader.ReadAsync()) columns.Add(reader.GetString(1));
+        if (!columns.Contains("ReceivedAtUtc"))
+        {
+            await using var addColumn = connection.CreateCommand();
+            addColumn.CommandText = "ALTER TABLE purchase_orders ADD COLUMN ReceivedAtUtc TEXT NULL;";
+            await addColumn.ExecuteNonQueryAsync();
+        }
+    }
+    finally { await connection.CloseAsync(); }
 }
 
 public partial class Program;

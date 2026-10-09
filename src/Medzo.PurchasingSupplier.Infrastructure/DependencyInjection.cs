@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Medzo.PurchasingSupplier.Application.Suppliers;
 using Medzo.PurchasingSupplier.Application.PurchaseOrders;
 using Medzo.PurchasingSupplier.Infrastructure.Persistence;
+using Medzo.PurchasingSupplier.Infrastructure.Messaging;
 
 namespace Medzo.PurchasingSupplier.Infrastructure;
 
@@ -20,6 +21,7 @@ public static class DependencyInjection
         });
         services.AddScoped<ISupplierRepository, SupplierRepository>();
         services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+        services.AddSingleton<IPurchaseOrderEventPublisher, KafkaPurchaseOrderEventPublisher>();
         return services;
     }
 }
