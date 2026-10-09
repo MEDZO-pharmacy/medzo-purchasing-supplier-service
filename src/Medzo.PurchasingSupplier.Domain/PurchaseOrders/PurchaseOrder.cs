@@ -26,7 +26,15 @@ public sealed class PurchaseOrder
     public string OrderNumber { get; private set; } = null!;
     public PurchaseOrderStatus Status { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
+    public DateTimeOffset? ReceivedAtUtc { get; private set; }
     public ICollection<PurchaseOrderItem> Items { get; private set; } = new List<PurchaseOrderItem>();
+
+    public void MarkReceived()
+    {
+        if (Status == PurchaseOrderStatus.Received) throw new InvalidOperationException("This purchase order has already been received.");
+        Status = PurchaseOrderStatus.Received;
+        ReceivedAtUtc = DateTimeOffset.UtcNow;
+    }
 }
 
 public sealed class PurchaseOrderItem
@@ -52,4 +60,4 @@ public sealed class PurchaseOrderItem
     public int Quantity { get; private set; }
 }
 
-public enum PurchaseOrderStatus { Pending }
+public enum PurchaseOrderStatus { Pending, Received }

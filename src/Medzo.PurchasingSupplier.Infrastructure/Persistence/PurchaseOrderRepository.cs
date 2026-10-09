@@ -11,7 +11,7 @@ public sealed class PurchaseOrderRepository(PurchasingSupplierDbContext database
         (await database.PurchaseOrders.AsNoTracking().Include(order => order.Supplier).Include(order => order.Items).ToListAsync(cancellationToken))
         .OrderByDescending(order => order.CreatedAtUtc)
         .ToList();
-    public Task<PurchaseOrder?> GetAsync(Guid id, CancellationToken cancellationToken) => database.PurchaseOrders.AsNoTracking().Include(order => order.Supplier).Include(order => order.Items).SingleOrDefaultAsync(order => order.Id == id, cancellationToken);
+    public Task<PurchaseOrder?> GetAsync(Guid id, CancellationToken cancellationToken) => database.PurchaseOrders.Include(order => order.Supplier).Include(order => order.Items).SingleOrDefaultAsync(order => order.Id == id, cancellationToken);
     public Task AddAsync(PurchaseOrder order, CancellationToken cancellationToken) => database.PurchaseOrders.AddAsync(order, cancellationToken).AsTask();
     public Task SaveChangesAsync(CancellationToken cancellationToken) => database.SaveChangesAsync(cancellationToken);
 }

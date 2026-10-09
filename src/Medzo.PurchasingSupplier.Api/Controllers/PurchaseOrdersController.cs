@@ -21,4 +21,8 @@ public sealed class PurchaseOrdersController(IPurchaseOrderService service) : Co
         var order = await service.CreateAsync(request, cancellationToken);
         return Created($"/api/purchase-orders/{order.Id}", order);
     }
+
+    [HttpPatch("{id:guid}/receive")]
+    public Task<PurchaseOrderResponse> Receive(Guid id, ReceivePurchaseOrderRequest request, CancellationToken cancellationToken) =>
+        service.ReceiveAsync(id, request, cancellationToken);
 }
