@@ -27,7 +27,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/medzo-pharmacy/medzo-purchasing-supplier-service
-  CONTAINER_APP_NAME: medzo-purchasing-supplier-service
+  CONTAINER_APP_NAME: medzo-purchasing-service
   CONTAINER_APP_ENVIRONMENT: medzo-env-01
   RESOURCE_GROUP: rg-MEDZO-NEW
 

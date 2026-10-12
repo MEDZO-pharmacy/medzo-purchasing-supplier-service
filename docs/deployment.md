@@ -12,7 +12,7 @@ Repository-level Azure OIDC variables are required before a deployment run.
 - Container Apps environment: `medzo-env-01`
 - SQL server: `medzo-new-sql`
 - SQL database: `medzo-purchasing-db`
-- Intended container app: `medzo-purchasing-supplier-service`
+- Existing container app: `medzo-purchasing-service`
 - Container registry: `ghcr.io`
 
 Do not create an ACR, Container Apps environment, SQL server, Event Hubs/Kafka,
