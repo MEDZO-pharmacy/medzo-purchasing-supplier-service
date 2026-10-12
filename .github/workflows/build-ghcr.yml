@@ -8,6 +8,7 @@ on:
       - '.dockerignore'
       - '.github/workflows/build-ghcr.yml'
       - 'docker/**'
+      - 'docs/deployment.md'
       - 'src/**'
       - 'tests/**'
       - 'Directory.Build.props'
