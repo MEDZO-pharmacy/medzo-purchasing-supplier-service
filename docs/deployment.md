@@ -4,6 +4,8 @@ The `main` workflow tests the .NET 10 solution, publishes immutable SHA and
 `latest` images to GHCR, and updates only the existing Purchasing Container App.
 It never creates Azure resources.
 
+Repository-level Azure OIDC variables are required before a deployment run.
+
 ## Existing Azure architecture
 
 - Resource group: `rg-MEDZO-NEW`
