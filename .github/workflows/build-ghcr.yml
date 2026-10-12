@@ -1,4 +1,4 @@
-name: Purchasing Supplier Service - Build GHCR
+name: Test and Deploy Purchasing Supplier Service
 
 on:
   push:
@@ -22,9 +22,13 @@ concurrency:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 env:
   IMAGE_NAME: ghcr.io/medzo-pharmacy/medzo-purchasing-supplier-service
+  CONTAINER_APP_NAME: medzo-purchasing-supplier-service
+  CONTAINER_APP_ENVIRONMENT: medzo-env-01
+  RESOURCE_GROUP: rg-MEDZO-NEW
 
 jobs:
   build-test-push:
@@ -60,3 +64,82 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.IMAGE_NAME }}:latest
+
+      - name: Validate Azure OpenID Connect variables
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          : "${AZURE_CLIENT_ID:?Add repository Actions variable AZURE_CLIENT_ID}"
+          : "${AZURE_TENANT_ID:?Add repository Actions variable AZURE_TENANT_ID}"
+          : "${AZURE_SUBSCRIPTION_ID:?Add repository Actions variable AZURE_SUBSCRIPTION_ID}"
+
+      - name: Log in to Azure using OpenID Connect
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate existing Azure resources and configuration
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            app_json=$(az containerapp show \
+              --name "${{ env.CONTAINER_APP_NAME }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --output json)
+
+            environment_id=$(jq -r '.properties.environmentId' <<< "$app_json")
+            [[ "$environment_id" == */${{ env.CONTAINER_APP_ENVIRONMENT }} ]] || {
+              echo "Existing app is not in ${{ env.CONTAINER_APP_ENVIRONMENT }}" >&2
+              exit 1
+            }
+
+            jq -e '.properties.template.containers[0].env[] | select(.name == "ConnectionStrings__PurchasingSupplier" and .secretRef != null)' <<< "$app_json" >/dev/null || {
+              echo "Existing app is missing the PurchasingSupplier SQL secret reference." >&2
+              exit 1
+            }
+            jq -e '.properties.template.containers[0].env[] | select(.name == "Jwt__Secret" and .secretRef != null)' <<< "$app_json" >/dev/null || {
+              echo "Existing app is missing the JWT secret reference." >&2
+              exit 1
+            }
+
+      - name: Deploy image to existing Purchasing Container App
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            az containerapp update \
+              --name "${{ env.CONTAINER_APP_NAME }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --image "${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+              --cpu 0.5 --memory 1Gi \
+              --min-replicas 0 --max-replicas 1 \
+              --set-env-vars \
+                ASPNETCORE_ENVIRONMENT=Production \
+                Database__Provider=SqlServer \
+                Database__MigrateOnStartup=true \
+                Jwt__Issuer=MedzoAuthService \
+                Jwt__Audience=MedzoClient \
+                Kafka__Enabled=false \
+                Cors__AllowedOrigins__0=https://brave-forest-045498500.3.azurestaticapps.net \
+              --output none
+
+      - name: Verify deployed health endpoint
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            fqdn=$(az containerapp show \
+              --name "${{ env.CONTAINER_APP_NAME }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --query 'properties.configuration.ingress.fqdn' \
+              --output tsv)
+            test -n "$fqdn"
+            echo "PURCHASING_API_URL=https://$fqdn" >> "$GITHUB_ENV"
+            curl --fail --retry 12 --retry-all-errors --retry-delay 10 "https://$fqdn/health"

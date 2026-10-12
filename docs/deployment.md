@@ -1,8 +1,8 @@
 # Purchasing and Supplier deployment
 
-The `main` workflow tests the .NET 10 solution and publishes immutable SHA and
-`latest` images to GHCR. It intentionally does not create or update Azure
-resources.
+The `main` workflow tests the .NET 10 solution, publishes immutable SHA and
+`latest` images to GHCR, and updates only the existing Purchasing Container App.
+It never creates Azure resources.
 
 ## Existing Azure architecture
 
@@ -23,7 +23,7 @@ Keep secrets in Container Apps and reference them from environment variables:
 ```text
 ASPNETCORE_ENVIRONMENT=Production
 Database__Provider=SqlServer
-Database__MigrateOnStartup=false
+Database__MigrateOnStartup=true
 ConnectionStrings__PurchasingSupplier=secretref:purchasing-db-connection
 Jwt__Secret=secretref:jwt-signing-secret
 Jwt__Issuer=MedzoAuthService
@@ -39,17 +39,17 @@ and its credentials have been verified.
 
 ## Database initialization
 
-The repository contains SQL Server EF Core migrations. Apply them as a
-controlled one-off operation before enabling application traffic. Leave
-`Database__MigrateOnStartup=false` during normal production operation so
-scale-out revisions cannot race to modify the schema.
+The repository contains SQL Server EF Core migrations. The production app runs
+them at startup. EF migration history makes this repeatable, and the app remains
+limited to one replica.
 
 After the database is initialized, verify `/health`, then create and retrieve a
 supplier and purchase order through authenticated API requests. Never commit
 the SQL connection string, JWT secret, or Kafka credentials.
 
-## Future Azure deployment (not enabled)
+## Azure deployment
 
-When Azure changes are explicitly approved, update only the existing container
-app to the SHA-tagged GHCR image. Preserve Consumption sizing at 0.5 CPU, 1 GiB,
-minimum replicas 0, maximum replicas 1, and ingress target port 8080.
+The workflow first verifies that the named app already exists in `medzo-env-01`
+and that its SQL and JWT environment variables reference existing secrets. It
+then updates only that app to the SHA-tagged GHCR image. Consumption sizing is
+preserved at 0.5 CPU, 1 GiB, minimum replicas 0, and maximum replicas 1.
