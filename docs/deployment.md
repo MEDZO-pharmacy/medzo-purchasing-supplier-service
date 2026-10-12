@@ -5,6 +5,7 @@ The `main` workflow tests the .NET 10 solution, publishes immutable SHA and
 It never creates Azure resources.
 
 Repository-level Azure OIDC variables are required before a deployment run.
+The deployment identity must also trust the repository's `main` branch.
 
 ## Existing Azure architecture
 
