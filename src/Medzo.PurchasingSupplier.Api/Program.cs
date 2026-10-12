@@ -14,21 +14,41 @@ LocalEnvironmentFile.LoadFromCurrentDirectory();
 
 var builder = WebApplication.CreateBuilder(args);
 
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
+if (builder.Environment.IsProduction() &&
+    !databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "Production requires Database:Provider=SqlServer and the existing Azure SQL connection.");
+}
+
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddHealthChecks();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+{
+    if (allowedOrigins.Length > 0) policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+}));
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var jwtSecret = builder.Configuration["Jwt:Secret"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
 if (!string.IsNullOrWhiteSpace(jwtSecret))
 {
+    if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+    {
+        throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience are required when JWT authentication is enabled.");
+    }
+
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new()
     {
         ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"], ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidIssuer = jwtIssuer, ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)), RoleClaimType = ClaimTypes.Role
     });
 }
@@ -44,8 +64,15 @@ if (string.Equals(builder.Configuration["Database:Provider"], "Sqlite", StringCo
     await EnsureSqliteSupplierColumnsAsync(database);
     await EnsureSqlitePurchaseOrderTablesAsync(database);
 }
+else if (builder.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var database = scope.ServiceProvider.GetRequiredService<PurchasingSupplierDbContext>();
+    await database.Database.MigrateAsync();
+}
 
 app.UseExceptionHandler();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

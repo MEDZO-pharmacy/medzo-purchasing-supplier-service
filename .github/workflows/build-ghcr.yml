@@ -1,0 +1,62 @@
+name: Purchasing Supplier Service - Build GHCR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.dockerignore'
+      - '.github/workflows/build-ghcr.yml'
+      - 'docker/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'Directory.Build.props'
+      - 'Medzo.PurchasingSupplier.sln'
+      - 'dotnet-tools.json'
+  workflow_dispatch:
+
+concurrency:
+  group: medzo-purchasing-supplier-ghcr
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/medzo-pharmacy/medzo-purchasing-supplier-service
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore and test
+        run: |
+          dotnet restore Medzo.PurchasingSupplier.sln
+          dotnet test Medzo.PurchasingSupplier.sln --configuration Release --no-restore
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
