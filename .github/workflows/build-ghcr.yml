@@ -70,7 +70,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          container_id=$(docker run --detach --publish 18080:8080 "${{ env.IMAGE_NAME }}:${{ github.sha }}")
+          container_id=$(docker run --detach \
+            --publish 18080:8080 \
+            --env ASPNETCORE_ENVIRONMENT=Development \
+            "${{ env.IMAGE_NAME }}:${{ github.sha }}")
           cleanup() {
             docker logs "$container_id" || true
             docker rm --force "$container_id" >/dev/null 2>&1 || true
