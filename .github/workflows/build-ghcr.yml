@@ -118,6 +118,7 @@ jobs:
             az containerapp update \
               --name "${{ env.CONTAINER_APP_NAME }}" \
               --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --container-name medzo-purchasing-service \
               --image "${{ env.IMAGE_NAME }}:${{ github.sha }}" \
               --cpu 0.5 --memory 1Gi \
               --min-replicas 0 --max-replicas 1 \
@@ -130,6 +131,69 @@ jobs:
                 Kafka__Enabled=false \
                 Cors__AllowedOrigins__0=https://brave-forest-045498500.3.azurestaticapps.net \
               --output none
+
+      - name: Configure Kafka sidecar in the existing Container App
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            app_id=$(az containerapp show \
+              --name "${{ env.CONTAINER_APP_NAME }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --query id \
+              --output tsv)
+
+            az containerapp show \
+              --name "${{ env.CONTAINER_APP_NAME }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --output json |
+              jq --arg app_image "${{ env.IMAGE_NAME }}:${{ github.sha }}" '
+                .properties.template.containers |= (
+                  map(select(.name != "medzo-kafka")) +
+                  [{
+                    name: "medzo-kafka",
+                    image: "docker.io/apache/kafka:3.9.0",
+                    resources: { cpu: 0.5, memory: "1Gi" },
+                    env: [
+                      { name: "KAFKA_NODE_ID", value: "1" },
+                      { name: "KAFKA_PROCESS_ROLES", value: "broker,controller" },
+                      { name: "KAFKA_LISTENERS", value: "PLAINTEXT://:9092,CONTROLLER://:9093" },
+                      { name: "KAFKA_ADVERTISED_LISTENERS", value: "PLAINTEXT://localhost:9092" },
+                      { name: "KAFKA_CONTROLLER_LISTENER_NAMES", value: "CONTROLLER" },
+                      { name: "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" },
+                      { name: "KAFKA_CONTROLLER_QUORUM_VOTERS", value: "1@localhost:9093" },
+                      { name: "KAFKA_INTER_BROKER_LISTENER_NAME", value: "PLAINTEXT" },
+                      { name: "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", value: "1" },
+                      { name: "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", value: "1" },
+                      { name: "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", value: "1" },
+                      { name: "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", value: "0" },
+                      { name: "KAFKA_AUTO_CREATE_TOPICS_ENABLE", value: "true" },
+                      { name: "KAFKA_HEAP_OPTS", value: "-Xms128m -Xmx256m" },
+                      { name: "CLUSTER_ID", value: "MkU3OEVBNTcwNTJENDM2Qk" },
+                      { name: "KAFKA_LOG_DIRS", value: "/tmp/kraft-combined-logs" }
+                    ]
+                  }]
+                ) |
+                (.properties.template.containers[] | select(.name == "medzo-purchasing-service").image) = $app_image |
+                (.properties.template.containers[] | select(.name == "medzo-purchasing-service").env) |= (
+                  map(select(.name != "Kafka__Enabled" and .name != "Kafka__BootstrapServers")) +
+                  [
+                    { name: "Kafka__Enabled", value: "true" },
+                    { name: "Kafka__BootstrapServers", value: "localhost:9092" }
+                  ]
+                ) |
+                { properties: { template: .properties.template } }
+              ' > containerapp-kafka-patch.json
+
+            az rest \
+              --method patch \
+              --url "https://management.azure.com${app_id}?api-version=2024-03-01" \
+              --headers "Content-Type=application/json" \
+              --body @containerapp-kafka-patch.json \
+              --output none
+
+            rm -f containerapp-kafka-patch.json
 
       - name: Verify deployed health endpoint
         uses: azure/cli@v2
@@ -144,3 +208,12 @@ jobs:
             test -n "$fqdn"
             echo "PURCHASING_API_URL=https://$fqdn" >> "$GITHUB_ENV"
             curl --fail --retry 12 --retry-all-errors --retry-delay 10 "https://$fqdn/health"
+
+            app_json=$(az containerapp show \
+              --name "${{ env.CONTAINER_APP_NAME }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --output json)
+
+            jq -e '.properties.template.containers[] | select(.name == "medzo-kafka" and .image == "docker.io/apache/kafka:3.9.0")' <<< "$app_json" >/dev/null
+            jq -e '.properties.template.containers[] | select(.name == "medzo-purchasing-service").env[] | select(.name == "Kafka__Enabled" and .value == "true")' <<< "$app_json" >/dev/null
+            jq -e '.properties.template.containers[] | select(.name == "medzo-purchasing-service").env[] | select(.name == "Kafka__BootstrapServers" and .value == "localhost:9092")' <<< "$app_json" >/dev/null
