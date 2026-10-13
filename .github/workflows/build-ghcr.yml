@@ -138,6 +138,24 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
+            dump_container_logs() {
+              az containerapp logs show \
+                --name "${{ env.CONTAINER_APP_NAME }}" \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --container medzo-purchasing-service \
+                --type system \
+                --tail 100 \
+                --follow false || true
+              az containerapp logs show \
+                --name "${{ env.CONTAINER_APP_NAME }}" \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --container medzo-purchasing-service \
+                --type console \
+                --tail 100 \
+                --follow false || true
+            }
+            trap dump_container_logs ERR
+
             fqdn=$(az containerapp show \
               --name "${{ env.CONTAINER_APP_NAME }}" \
               --resource-group "${{ env.RESOURCE_GROUP }}" \
