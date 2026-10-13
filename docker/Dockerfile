@@ -9,12 +9,23 @@ RUN dotnet publish src/Medzo.PurchasingSupplier.Api/Medzo.PurchasingSupplier.Api
     --no-restore \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS dotnet-runtime
+
+FROM apache/kafka:3.9.0 AS final
+USER root
 WORKDIR /app
 
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV PATH="${PATH}:/usr/share/dotnet"
 
+COPY --from=dotnet-runtime /usr/share/dotnet /usr/share/dotnet
 COPY --from=build /app/publish .
+COPY docker/start-with-kafka.sh /usr/local/bin/start-with-kafka.sh
 
-ENTRYPOINT ["dotnet", "Medzo.PurchasingSupplier.Api.dll"]
+RUN chmod +x /usr/local/bin/start-with-kafka.sh \
+    && chown -R appuser:root /app
+
+USER appuser
+ENTRYPOINT ["/usr/local/bin/start-with-kafka.sh"]
