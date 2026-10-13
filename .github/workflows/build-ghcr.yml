@@ -183,6 +183,7 @@ jobs:
                     { name: "Kafka__BootstrapServers", value: "localhost:9092" }
                   ]
                 ) |
+                .properties.template.scale |= del(.cooldownPeriod, .pollingInterval) |
                 { properties: { template: .properties.template } }
               ' > containerapp-kafka-patch.json
 
