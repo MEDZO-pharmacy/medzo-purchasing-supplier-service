@@ -66,6 +66,33 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.IMAGE_NAME }}:latest
 
+      - name: Validate Kafka-enabled container startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id=$(docker run --detach --publish 18080:8080 "${{ env.IMAGE_NAME }}:${{ github.sha }}")
+          cleanup() {
+            docker logs "$container_id" || true
+            docker rm --force "$container_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error --connect-timeout 2 --max-time 5 http://127.0.0.1:18080/health; then
+              exit 0
+            fi
+
+            if ! docker inspect --format '{{.State.Running}}' "$container_id" | grep -q true; then
+              echo "Kafka-enabled container exited before becoming healthy." >&2
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          echo "Kafka-enabled container did not become healthy within 180 seconds." >&2
+          exit 1
+
       - name: Validate Azure OpenID Connect variables
         shell: bash
         env:
@@ -163,7 +190,7 @@ jobs:
               --output tsv)
             test -n "$fqdn"
             echo "PURCHASING_API_URL=https://$fqdn" >> "$GITHUB_ENV"
-            curl --fail --retry 12 --retry-all-errors --retry-delay 10 "https://$fqdn/health"
+            curl --fail --retry 12 --retry-all-errors --retry-delay 10 --connect-timeout 10 --max-time 20 "https://$fqdn/health"
 
             app_json=$(az containerapp show \
               --name "${{ env.CONTAINER_APP_NAME }}" \
