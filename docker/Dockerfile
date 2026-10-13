@@ -9,7 +9,7 @@ RUN dotnet publish src/Medzo.PurchasingSupplier.Api/Medzo.PurchasingSupplier.Api
     --no-restore \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS dotnet-runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS dotnet-runtime
 
 FROM apache/kafka:3.9.0 AS final
 USER root
