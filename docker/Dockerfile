@@ -15,6 +15,8 @@ FROM apache/kafka:3.9.0 AS final
 USER root
 WORKDIR /app
 
+RUN apk add --no-cache libstdc++ libgcc
+
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENV DOTNET_ROOT=/usr/share/dotnet
