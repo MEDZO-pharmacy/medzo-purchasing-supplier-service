@@ -20,9 +20,11 @@ export CLUSTER_ID="${CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}"
 
 kafka_pid=""
 api_pid=""
+consumer_pid=""
 
 shutdown() {
   if [[ -n "$api_pid" ]]; then kill -TERM "$api_pid" 2>/dev/null || true; fi
+  if [[ -n "$consumer_pid" ]]; then kill -TERM "$consumer_pid" 2>/dev/null || true; fi
   if [[ -n "$kafka_pid" ]]; then kill -TERM "$kafka_pid" 2>/dev/null || true; fi
 }
 
@@ -51,15 +53,22 @@ if [[ "$kafka_ready" != "true" ]]; then
   exit 1
 fi
 
-dotnet /app/Medzo.PurchasingSupplier.Api.dll &
+dotnet /app/purchasing/Medzo.PurchasingSupplier.Api.dll &
 api_pid=$!
 
+# Express Container Apps do not support sidecars. Run the existing Catalogue/
+# Inventory service in the same container so its Kafka consumer can use the
+# broker on localhost while its public API remains on the existing app.
+dotnet /app/catalogue/Medzo.CatalogueInventory.Api.dll --urls http://127.0.0.1:8081 &
+consumer_pid=$!
+
 set +e
-wait -n "$kafka_pid" "$api_pid"
+wait -n "$kafka_pid" "$api_pid" "$consumer_pid"
 exit_code=$?
 set -e
 
 shutdown
 wait "$api_pid" 2>/dev/null || true
+wait "$consumer_pid" 2>/dev/null || true
 wait "$kafka_pid" 2>/dev/null || true
 exit "$exit_code"

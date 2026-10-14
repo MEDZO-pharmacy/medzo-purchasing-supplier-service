@@ -39,6 +39,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout Catalogue/Inventory Kafka consumer
+        uses: actions/checkout@v4
+        with:
+          repository: MEDZO-pharmacy/medzo-catalogue-inventory-service
+          ref: 47f6223f2d566af4e60c0486802df76755110967
+          path: catalogue-service
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -73,6 +80,13 @@ jobs:
           container_id=$(docker run --detach \
             --publish 18080:8080 \
             --env ASPNETCORE_ENVIRONMENT=Development \
+            --env Database__Provider=Sqlite \
+            --env ConnectionStrings__CatalogueInventory='Data Source=/tmp/catalogue-integration.db' \
+            --env Jwt__Secret='ci-only-shared-signing-key-with-at-least-32-bytes' \
+            --env Jwt__Issuer=MedzoAuthService \
+            --env Jwt__Audience=MedzoClient \
+            --env Kafka__Enabled=true \
+            --env Kafka__BootstrapServers=localhost:9092 \
             "${{ env.IMAGE_NAME }}:${{ github.sha }}")
           cleanup() {
             docker logs "$container_id" || true
@@ -139,6 +153,10 @@ jobs:
               echo "Existing app is missing the JWT secret reference." >&2
               exit 1
             }
+            jq -e '.properties.configuration.secrets[] | select(.name == "catalogue-db-connection")' <<< "$app_json" >/dev/null || {
+              echo "Existing app is missing the CatalogueInventory SQL secret." >&2
+              exit 1
+            }
 
       - name: Deploy image to existing Purchasing Container App
         uses: azure/cli@v2
@@ -160,6 +178,8 @@ jobs:
                 Jwt__Audience=MedzoClient \
                 Kafka__Enabled=true \
                 Kafka__BootstrapServers=localhost:9092 \
+                Kafka__ConsumerGroup=medzo-catalogue-inventory-v1 \
+                ConnectionStrings__CatalogueInventory=secretref:catalogue-db-connection \
                 Cors__AllowedOrigins__0=https://brave-forest-045498500.3.azurestaticapps.net \
               --output none
 
