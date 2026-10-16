@@ -9,6 +9,7 @@ using Medzo.PurchasingSupplier.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.OpenApi.Models;
 
 LocalEnvironmentFile.LoadFromCurrentDirectory();
 
@@ -23,6 +24,23 @@ if (builder.Environment.IsProduction() &&
 }
 
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Medzo Purchasing and Supplier API", Version = "v1" });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Enter a Medzo JWT bearer token.", Name = "Authorization", In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT"
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecurityScheme
+        {
+            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+        }] = Array.Empty<string>()
+    });
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddHealthChecks();
@@ -73,6 +91,8 @@ else if (builder.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 
 app.UseExceptionHandler();
 app.UseCors();
+app.UseSwagger();
+app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Medzo Purchasing and Supplier API v1"));
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
