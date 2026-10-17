@@ -1,6 +1,7 @@
 using Medzo.PurchasingSupplier.Application.Suppliers;
 using Medzo.PurchasingSupplier.Domain.Suppliers;
 using Moq;
+using Xunit;
 
 namespace Medzo.PurchasingSupplier.UnitTests;
 
