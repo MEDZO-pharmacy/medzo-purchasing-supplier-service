@@ -1,0 +1,76 @@
+name: Purchasing Service Mutation Testing
+
+on:
+  push:
+    branches:
+      - purchasing-mutation-testing
+    paths:
+      - '.github/workflows/mutation-testing.yml'
+      - 'src/Medzo.PurchasingSupplier.Domain/**'
+      - 'tests/Medzo.PurchasingSupplier.UnitTests/**'
+      - 'Directory.Build.props'
+      - 'Medzo.PurchasingSupplier.sln'
+      - 'dotnet-tools.json'
+      - 'stryker-config.json'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/mutation-testing.yml'
+      - 'src/Medzo.PurchasingSupplier.Domain/**'
+      - 'tests/Medzo.PurchasingSupplier.UnitTests/**'
+      - 'Directory.Build.props'
+      - 'Medzo.PurchasingSupplier.sln'
+      - 'dotnet-tools.json'
+      - 'stryker-config.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation-test:
+    name: Stryker.NET quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore tools and dependencies
+        run: |
+          dotnet tool restore
+          dotnet restore Medzo.PurchasingSupplier.sln
+
+      - name: Run unit tests
+        run: dotnet test tests/Medzo.PurchasingSupplier.UnitTests/Medzo.PurchasingSupplier.UnitTests.csproj --configuration Release --no-restore
+
+      - name: Run mutation tests
+        run: dotnet stryker --config-file stryker-config.json
+
+      - name: Add mutation summary
+        if: always()
+        shell: bash
+        run: |
+          report=$(find StrykerOutput -type f -name mutation-report.md | sort | tail -n 1)
+          if [ -n "$report" ]; then
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload HTML, JSON, and Markdown reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: purchasing-mutation-reports-${{ github.run_number }}
+          path: |
+            StrykerOutput/**/reports/mutation-report.html
+            StrykerOutput/**/reports/mutation-report.json
+            StrykerOutput/**/reports/mutation-report.md
+          if-no-files-found: error
+          retention-days: 14
