@@ -376,6 +376,9 @@ paket-files/
 # OpenCover UI analysis results
 OpenCover/
 
+# Stryker.NET generated mutation reports
+StrykerOutput/
+
 # Azure Stream Analytics local run output
 ASALocalRun/
 

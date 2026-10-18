@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-net/master/src/Stryker.Core/Stryker.Core/options.schema.json",
+  "stryker-config": {
+    "project": "src/Medzo.PurchasingSupplier.Domain/Medzo.PurchasingSupplier.Domain.csproj",
+    "test-projects": [
+      "tests/Medzo.PurchasingSupplier.UnitTests/Medzo.PurchasingSupplier.UnitTests.csproj"
+    ],
+    "mutate": [
+      "**/PurchaseOrders/PurchaseOrder.cs",
+      "**/Suppliers/Supplier.cs"
+    ],
+    "reporters": [
+      "progress",
+      "cleartext",
+      "html",
+      "json",
+      "markdown"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 70,
+      "break": 65
+    },
+    "concurrency": 2,
+    "configuration": "Release"
+  }
+}
