@@ -1,0 +1,5 @@
+{
+  "name": "Purchasing and Supplier",
+  "sourceProject": "src/Medzo.PurchasingSupplier.Api/Medzo.PurchasingSupplier.Api.csproj",
+  "testProject": "tests/Medzo.PurchasingSupplier.UnitTests/Medzo.PurchasingSupplier.UnitTests.csproj"
+}

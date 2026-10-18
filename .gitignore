@@ -430,3 +430,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Generated quality metrics and analyzer reports
+.quality-output/
